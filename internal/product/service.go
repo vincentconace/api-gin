@@ -17,7 +17,7 @@ type Service interface {
 
 var (
 	EmptyProduct          = domain.Product{}
-	ErrNotFound           = errors.New("employee not found")
+	ErrNotFound           = errors.New("product not found")
 	ErrInternal           = errors.New("internal error")
 	ErrProductAlredyExist = errors.New("product already exists")
 	ErrCreatedProduct     = errors.New("error creating product")

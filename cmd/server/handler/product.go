@@ -56,7 +56,7 @@ func (h *ProductHandler) Create() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var p domain.Product
 		if err := c.ShouldBindJSON(&p); err != nil {
-			web.Error(c, http.StatusBadRequest, "invalid request")
+			web.Error(c, http.StatusUnprocessableEntity, "invalid request")
 			return
 		}
 
