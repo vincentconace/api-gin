@@ -218,3 +218,37 @@ func TestUpdateErrNotFount(t *testing.T) {
 
 	assert.True(t, result)
 }*/
+
+func TestDeleteOk(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		return
+	}
+	defer db.Close()
+
+	mock.ExpectPrepare("DELETE FROM products WHERE id = ?")
+	mock.ExpectExec("").WillReturnResult(sqlmock.NewResult(1, 1))
+
+	repository := NewRepository(db)
+	err = repository.Delete(ctx, 1)
+
+	assert.NoError(t, err)
+}
+
+func TestDeleteErrNoDeleted(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		return
+	}
+	defer db.Close()
+
+	mock.ExpectPrepare("DELETE FROM products WHERE id = ?")
+	mock.ExpectExec("").WillReturnError(ErrNotFound)
+
+	repository := NewRepository(db)
+	err = repository.Delete(ctx, 1)
+
+	assert.EqualError(t, ErrNotFound, err.Error())
+}
