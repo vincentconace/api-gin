@@ -1,13 +1,17 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 	"github.com/vincentconace/api-gin/internal/domain"
 	"github.com/vincentconace/api-gin/internal/product"
 	"github.com/vincentconace/api-gin/pkg/web"
@@ -19,10 +23,11 @@ var (
 
 type ProductHandler struct {
 	productService product.Service
+	redis          *redis.Client
 }
 
-func NewProductHandler(productService product.Service) *ProductHandler {
-	return &ProductHandler{productService: productService}
+func NewProductHandler(productService product.Service, rd *redis.Client) *ProductHandler {
+	return &ProductHandler{productService: productService, redis: rd}
 }
 
 func (h *ProductHandler) Get() gin.HandlerFunc {
@@ -43,11 +48,27 @@ func (h *ProductHandler) GetById() gin.HandlerFunc {
 		if err != nil {
 			web.Error(c, http.StatusBadRequest, "invalid id")
 		}
+		key := fmt.Sprintf("product[%d]", idConv)
+		productRedis, err := h.redis.Get(c, key).Result()
+		if err != nil {
+			fmt.Println(err)
+		}
+		if productRedis != "" {
+			var product domain.Product
+			err = json.Unmarshal([]byte(productRedis), &product)
+			if err != nil {
+				fmt.Println(err)
+			}
+			fmt.Println("Devolvio desde redis")
+			web.Success(c, http.StatusOK, product)
+			return
+		}
 		product, err := h.productService.GetById(c, idConv)
 		if err != nil {
 			web.Error(c, http.StatusNotFound, "product not found")
 			return
 		}
+
 		web.Success(c, http.StatusOK, product)
 	}
 }
@@ -79,6 +100,18 @@ func (h *ProductHandler) Create() gin.HandlerFunc {
 			web.Error(c, http.StatusBadRequest, err.Error())
 			return
 		}
+
+		dataByte, err := json.Marshal(product)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		key := fmt.Sprintf("product[%d]", *product.ID)
+		productRedis, _ := h.redis.Set(c, key, string(dataByte), 24*time.Hour).Result()
+		if productRedis != "" {
+			fmt.Println("El producto se guardo correctamente", productRedis)
+		}
+
 		web.Success(c, http.StatusOK, product)
 	}
 }
@@ -121,6 +154,13 @@ func (h *ProductHandler) Delete() gin.HandlerFunc {
 			web.Error(c, http.StatusNotFound, "failed to delete product")
 			return
 		}
+
+		key := fmt.Sprintf("product[%d]", idConv)
+		result, _ := h.redis.Del(c, key).Result()
+		if result > 0 {
+			fmt.Println("El producto se elimino correctamente")
+		}
+
 		web.Success(c, http.StatusNoContent, "")
 	}
 }
