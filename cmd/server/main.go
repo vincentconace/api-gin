@@ -8,7 +8,6 @@ import (
 	"github.com/vincentconace/api-gin/cmd/server/router"
 	"github.com/vincentconace/api-gin/internal/domain"
 	"github.com/vincentconace/api-gin/pkg/db"
-	"github.com/vincentconace/api-gin/pkg/redis"
 )
 
 func main() {
@@ -22,11 +21,8 @@ func main() {
 
 	r := gin.Default()
 
-	// Init redis connection
-	rd := redis.RedisClient()
-
 	// Run server
-	router := router.NewRouter(r, db, rd)
+	router := router.NewRouter(r, db)
 	router.MapaRuter()
 
 	if err := r.Run(":8080"); err != nil {

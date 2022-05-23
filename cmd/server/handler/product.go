@@ -1,17 +1,15 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-redis/redis/v8"
 	"github.com/vincentconace/api-gin/internal/domain"
 	"github.com/vincentconace/api-gin/internal/product"
+	redisClient "github.com/vincentconace/api-gin/pkg/redis"
 	"github.com/vincentconace/api-gin/pkg/web"
 )
 
@@ -21,10 +19,10 @@ var (
 
 type ProductHandler struct {
 	productService product.Service
-	redis          *redis.Client
+	redis          redisClient.Redis
 }
 
-func NewProductHandler(productService product.Service, rd *redis.Client) *ProductHandler {
+func NewProductHandler(productService product.Service, rd redisClient.Redis) *ProductHandler {
 	return &ProductHandler{productService: productService, redis: rd}
 }
 
@@ -47,18 +45,14 @@ func (h *ProductHandler) GetById() gin.HandlerFunc {
 			web.Error(c, http.StatusBadRequest, "invalid id")
 		}
 		key := fmt.Sprintf("product[%d]", idConv)
-		productRedis, err := h.redis.Get(c, key).Result()
+		productRedis, err := h.redis.Get(c, key)
 		if err != nil {
 			fmt.Println(err)
 		}
-		if productRedis != "" {
-			var product domain.Product
-			err = json.Unmarshal([]byte(productRedis), &product)
-			if err != nil {
-				fmt.Println(err)
-			}
+		if productRedis != nil {
+
 			fmt.Println("Devolvio desde redis")
-			web.Success(c, http.StatusOK, product)
+			web.Success(c, http.StatusOK, productRedis)
 			return
 		}
 		product, err := h.productService.GetById(c, uint(idConv))
@@ -99,13 +93,11 @@ func (h *ProductHandler) Create() gin.HandlerFunc {
 			return
 		}
 
-		dataByte, err := json.Marshal(product)
+		key := fmt.Sprintf("product[%d]", product.Model.ID)
+		productRedis, err := h.redis.Set(c, key, product, 24)
 		if err != nil {
 			fmt.Println(err)
 		}
-
-		key := fmt.Sprintf("product[%d]", product.Model.ID)
-		productRedis, _ := h.redis.Set(c, key, string(dataByte), 24*time.Hour).Result()
 		if productRedis != "" {
 			fmt.Println("El producto se guardo correctamente", productRedis)
 		}
@@ -153,11 +145,11 @@ func (h *ProductHandler) Delete() gin.HandlerFunc {
 			return
 		}
 
-		key := fmt.Sprintf("product[%d]", idConv)
-		result, _ := h.redis.Del(c, key).Result()
-		if result > 0 {
-			fmt.Println("El producto se elimino correctamente")
-		}
+		// key := fmt.Sprintf("product[%d]", idConv)
+		// result, _ := h.redis.Del(c, key).Result()
+		// if result > 0 {
+		// 	fmt.Println("El producto se elimino correctamente")
+		// }
 
 		web.Success(c, http.StatusNoContent, "")
 	}
