@@ -10,8 +10,9 @@ import (
 )
 
 type Redis interface {
-	Set(ctx context.Context, key string, data interface{}, timeDuration time.Duration) (string, error)
-	Get(ctx context.Context, key string) (interface{}, error)
+	Set(ctx context.Context, key string, data interface{}, timeDuration time.Duration) string
+	Get(ctx context.Context, key string) interface{}
+	Del(ctx context.Context, key string) int
 }
 
 type redisClient struct {
@@ -30,7 +31,7 @@ func NewRedisClient() Redis {
 	return &redisClient{rd: rdb}
 }
 
-func (r *redisClient) Set(ctx context.Context, key string, data interface{}, timeDuration time.Duration) (string, error) {
+func (r *redisClient) Set(ctx context.Context, key string, data interface{}, timeDuration time.Duration) string {
 	dataByte, err := json.Marshal(data)
 	if err != nil {
 		fmt.Println(err)
@@ -40,10 +41,10 @@ func (r *redisClient) Set(ctx context.Context, key string, data interface{}, tim
 		fmt.Println(err)
 	}
 
-	return datastring, err
+	return datastring
 }
 
-func (r *redisClient) Get(ctx context.Context, key string) (interface{}, error) {
+func (r *redisClient) Get(ctx context.Context, key string) interface{} {
 	var data interface{}
 	dataByte, err := r.rd.Get(ctx, key).Result()
 	if err != nil {
@@ -55,5 +56,14 @@ func (r *redisClient) Get(ctx context.Context, key string) (interface{}, error) 
 		fmt.Println(err)
 	}
 
-	return data, err
+	return data
+}
+
+func (r *redisClient) Del(ctx context.Context, key string) int {
+	result, err := r.rd.Del(ctx, key).Result()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	return int(result)
 }

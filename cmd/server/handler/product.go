@@ -45,10 +45,8 @@ func (h *ProductHandler) GetById() gin.HandlerFunc {
 			web.Error(c, http.StatusBadRequest, "invalid id")
 		}
 		key := fmt.Sprintf("product[%d]", idConv)
-		productRedis, err := h.redis.Get(c, key)
-		if err != nil {
-			fmt.Println(err)
-		}
+		productRedis := h.redis.Get(c, key)
+
 		if productRedis != nil {
 
 			fmt.Println("Devolvio desde redis")
@@ -94,10 +92,7 @@ func (h *ProductHandler) Create() gin.HandlerFunc {
 		}
 
 		key := fmt.Sprintf("product[%d]", product.Model.ID)
-		productRedis, err := h.redis.Set(c, key, product, 24)
-		if err != nil {
-			fmt.Println(err)
-		}
+		productRedis := h.redis.Set(c, key, product, 24)
 		if productRedis != "" {
 			fmt.Println("El producto se guardo correctamente", productRedis)
 		}
@@ -145,11 +140,11 @@ func (h *ProductHandler) Delete() gin.HandlerFunc {
 			return
 		}
 
-		// key := fmt.Sprintf("product[%d]", idConv)
-		// result, _ := h.redis.Del(c, key).Result()
-		// if result > 0 {
-		// 	fmt.Println("El producto se elimino correctamente")
-		// }
+		key := fmt.Sprintf("product[%d]", idConv)
+		result := h.redis.Del(c, key)
+		if result > 0 {
+			fmt.Println("El producto se elimino correctamente en redis")
+		}
 
 		web.Success(c, http.StatusNoContent, "")
 	}
