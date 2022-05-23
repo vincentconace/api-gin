@@ -5,9 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -63,7 +61,7 @@ func (h *ProductHandler) GetById() gin.HandlerFunc {
 			web.Success(c, http.StatusOK, product)
 			return
 		}
-		product, err := h.productService.GetById(c, idConv)
+		product, err := h.productService.GetById(c, uint(idConv))
 		if err != nil {
 			web.Error(c, http.StatusNotFound, "product not found")
 			return
@@ -81,19 +79,19 @@ func (h *ProductHandler) Create() gin.HandlerFunc {
 			return
 		}
 
-		productReflect := reflect.ValueOf(p)
-		var valuesNil []string
-		for i := 0; i < productReflect.NumField(); i++ {
-			if e := productReflect.Field(i); e.IsNil() &&
-				productReflect.Type().Field(i).Name != "ID" {
-				valuesNil = append(valuesNil, productReflect.Type().Field(i).Name)
-			}
-		}
+		// productReflect := reflect.ValueOf(p)
+		// var valuesNil []string
+		// for i := 0; i < productReflect.NumField(); i++ {
+		// 	if e := productReflect.Field(i); e.IsNil() &&
+		// 		productReflect.Type().Field(i).Name != "ID" {
+		// 		valuesNil = append(valuesNil, productReflect.Type().Field(i).Name)
+		// 	}
+		// }
 
-		if len(valuesNil) > 0 {
-			web.Error(c, 422, "required fields: %s", strings.Join(valuesNil, ", "))
-			return
-		}
+		// if len(valuesNil) > 0 {
+		// 	web.Error(c, 422, "required fields: %s", strings.Join(valuesNil, ", "))
+		// 	return
+		// }
 
 		product, err := h.productService.Create(c, p)
 		if err != nil {
@@ -106,7 +104,7 @@ func (h *ProductHandler) Create() gin.HandlerFunc {
 			fmt.Println(err)
 		}
 
-		key := fmt.Sprintf("product[%d]", *product.ID)
+		key := fmt.Sprintf("product[%d]", product.Model.ID)
 		productRedis, _ := h.redis.Set(c, key, string(dataByte), 24*time.Hour).Result()
 		if productRedis != "" {
 			fmt.Println("El producto se guardo correctamente", productRedis)
@@ -130,7 +128,7 @@ func (h *ProductHandler) Update() gin.HandlerFunc {
 			return
 		}
 
-		productUpdated, err := h.productService.Update(c, idConv, p)
+		productUpdated, err := h.productService.Update(c, uint(idConv), p)
 		if err != nil {
 			web.Error(c, http.StatusNotFound, err.Error())
 			return
@@ -149,7 +147,7 @@ func (h *ProductHandler) Delete() gin.HandlerFunc {
 			return
 		}
 
-		err = h.productService.Delete(c, idConv)
+		err = h.productService.Delete(c, uint(idConv))
 		if err != nil {
 			web.Error(c, http.StatusNotFound, "failed to delete product")
 			return

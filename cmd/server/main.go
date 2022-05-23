@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/vincentconace/api-gin/cmd/server/router"
+	"github.com/vincentconace/api-gin/internal/domain"
 	"github.com/vincentconace/api-gin/pkg/db"
 	"github.com/vincentconace/api-gin/pkg/redis"
 )
@@ -16,11 +17,9 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 	// Init database connection
-	db, err := db.Init()
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
+	db := db.InitMysqlDB()
+	db.AutoMigrate(&domain.Product{})
+
 	r := gin.Default()
 
 	// Init redis connection
